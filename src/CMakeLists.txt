@@ -28,8 +28,8 @@ SET (HEADERS
 	JSONUtils.h
 )
 
-include_directories("${PROJECT_SOURCE_DIR}/../deploy/nlohmann/include")
-include_directories("${PROJECT_SOURCE_DIR}/../deploy/spdlog/include")
+include_directories("${NLOHMANN_INCLUDE_DIR}")
+include_directories("${SPDLOG_INCLUDE_DIR}")
 
 add_library (JSONUtils SHARED ${SOURCES} ${HEADERS})
 
