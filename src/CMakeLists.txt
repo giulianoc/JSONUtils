@@ -33,12 +33,6 @@ include_directories("${SPDLOG_INCLUDE_DIR}")
 
 add_library (JSONUtils SHARED ${SOURCES} ${HEADERS})
 
-if (ZORAC)
-	install(TARGETS JSONUtils DESTINATION services/cms-import)
-	install(TARGETS JSONUtils DESTINATION services/cms-pusher)
-	install(TARGETS JSONUtils DESTINATION services/cms-getter)
-else()
-	install (TARGETS JSONUtils DESTINATION lib)
-	install (FILES ${HEADERS} DESTINATION include)
-endif()
+install (TARGETS JSONUtils DESTINATION lib)
+install (FILES ${HEADERS} DESTINATION include)
 
