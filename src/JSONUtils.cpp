@@ -1,5 +1,6 @@
 #include "JSONUtils.h"
 #include "spdlog/spdlog.h"
+#include <regex>
 
 bool JSONUtils::isMetadataPresent(json root, string field)
 {
@@ -399,4 +400,37 @@ string JSONUtils::toString(json root)
 
 		return Json::writeString(wbuilder, joValueRoot);
 	*/
+}
+
+// Rimuove commenti singola riga e multi-riga
+string JSONUtils::json5_removeComments(const string &input)
+{
+	// Rimuove i commenti "// ... \n"
+	string no_single_line = regex_replace(input, regex(R"(\/\/[^\n]*)"), "");
+
+	// Rimuove i commenti multi-riga "/* ... */" anche su più righe
+	// string no_multi_line = regex_replace(no_single_line, regex(R"((?s)\/\*.*?\*\/)"), "");
+	string no_multi_line = regex_replace(no_single_line, regex(R"(\/\*[\s\S]*?\*\/)"), "");
+
+	return no_multi_line;
+}
+
+// Rimuove le virgole finali in oggetti e array
+string JSONUtils::json5_removeTrailingCommas(const string &input) { return regex_replace(input, regex(R"(,\s*([\]}]))"), "$1"); }
+
+// Mette le virgolette attorno a chiavi non quotate
+string JSONUtils::json5_quoteUnquotedKeys(const string &input)
+{
+	// Cerca chiavi tipo: chiave: → "chiave":
+	return regex_replace(input, regex(R"((\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*):)"), "$1\"$2\"$3:");
+}
+
+// Funzione completa: JSON5 → JSON standard
+string JSONUtils::json5ToJson(const string &json5)
+{
+	string cleaned = json5_removeComments(json5);
+	cleaned = json5_removeTrailingCommas(cleaned);
+	cleaned = json5_quoteUnquotedKeys(cleaned);
+
+	return cleaned;
 }

@@ -57,6 +57,13 @@ class JSONUtils
 
 	static json toJson(vector<int32_t> v);
 	static json toJson(vector<string> v);
+
+	static string json5ToJson(const string &json5);
+
+  private:
+	static string json5_removeComments(const string &input);
+	static string json5_removeTrailingCommas(const string &input);
+	static string json5_quoteUnquotedKeys(const string &input);
 };
 
 #endif
