@@ -1,6 +1,13 @@
 #include "JSONUtils.h"
 #include "spdlog/spdlog.h"
+#include <fstream>
 #include <regex>
+
+#ifdef _WIN32
+extern char **_environ;
+#else
+extern char **environ;
+#endif
 
 bool JSONUtils::isMetadataPresent(json root, string field)
 {
@@ -433,4 +440,94 @@ string JSONUtils::json5ToJson(const string &json5)
 	cleaned = json5_quoteUnquotedKeys(cleaned);
 
 	return cleaned;
+}
+
+json JSONUtils::loadConfigurationFile(string configurationPathName, string environmentPrefix)
+{
+
+#ifdef BOOTSERVICE_DEBUG_LOG
+#ifdef _WIN32
+	ofstream of("C:\\bootservice.log", ofstream::app);
+#else
+	ofstream of("/tmp/bootservice.log", ofstream::app);
+#endif
+	of << "loadConfigurationFile..." << endl;
+#endif
+
+	string sConfigurationFile;
+	try
+	{
+		ifstream configurationFile(configurationPathName, ifstream::binary);
+		stringstream buffer;
+		buffer << configurationFile.rdbuf();
+		if (environmentPrefix == "")
+			sConfigurationFile = buffer.str();
+		else
+			sConfigurationFile = applyEnvironmentToConfiguration(buffer.str(), environmentPrefix);
+
+		json configurationRoot = json::parse(
+			sConfigurationFile,
+			nullptr, // callback
+			true,	 // allow exceptions
+			true	 // ignore_comments
+		);
+
+		return configurationRoot;
+	}
+	catch (exception &e)
+	{
+#ifdef BOOTSERVICE_DEBUG_LOG
+#ifdef _WIN32
+		ofstream of("C:\\bootservice.log", ofstream::app);
+#else
+		ofstream of("/tmp/bootservice.log", ofstream::app);
+#endif
+		of << "loadConfigurationFile failed, configurationPathName: " << configurationPathName << ", exception: " << e << endl;
+#endif
+		throw;
+	}
+}
+
+string JSONUtils::applyEnvironmentToConfiguration(string configuration, string environmentPrefix)
+{
+#ifdef _WIN32
+	char **s = _environ;
+#else
+	char **s = environ;
+#endif
+
+#ifdef BOOTSERVICE_DEBUG_LOG
+#ifdef _WIN32
+	ofstream of("C:\\bootservice.log", ofstream::app);
+#else
+	ofstream of("/tmp/bootservice.log", ofstream::app);
+#endif
+#endif
+
+	int envNumber = 0;
+	for (; *s; s++)
+	{
+		string envVariable = *s;
+#ifdef BOOTSERVICE_DEBUG_LOG
+//          of << "ENV " << *s << endl;
+#endif
+		if (envVariable.starts_with(environmentPrefix))
+		{
+			size_t endOfVarName = envVariable.find("=");
+			if (endOfVarName == string::npos)
+				continue;
+
+			envNumber++;
+
+			// sarebbe \$\{CATRAMMSGUIAPPS_PATH\}
+			string envLabel = std::format("\\$\\{{{}\\}}", envVariable.substr(0, endOfVarName));
+			string envValue = envVariable.substr(endOfVarName + 1);
+#ifdef BOOTSERVICE_DEBUG_LOG
+			of << "ENV " << envLabel << ": " << envValue << endl;
+#endif
+			configuration = regex_replace(configuration, regex(envLabel), envValue);
+		}
+	}
+
+	return configuration;
 }

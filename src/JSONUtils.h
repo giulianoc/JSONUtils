@@ -59,11 +59,13 @@ class JSONUtils
 	static json toJson(vector<string> v);
 
 	static string json5ToJson(const string &json5);
+	static json loadConfigurationFile(string configurationPathName, string environmentPrefix);
 
   private:
 	static string json5_removeComments(const string &input);
 	static string json5_removeTrailingCommas(const string &input);
 	static string json5_quoteUnquotedKeys(const string &input);
+	static string applyEnvironmentToConfiguration(string configuration, string environmentPrefix);
 };
 
 #endif
