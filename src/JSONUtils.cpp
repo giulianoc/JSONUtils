@@ -165,7 +165,7 @@ int64_t JSONUtils::asInt64(json root, string field, int64_t defaultValue, bool n
 			{
 				try
 				{
-					return strtoll(asString(root, "", "0").c_str(), nullptr, 10);
+					return stoll(asString(root, "", "0").c_str());
 				}
 				catch (exception &e)
 				{
@@ -183,7 +183,66 @@ int64_t JSONUtils::asInt64(json root, string field, int64_t defaultValue, bool n
 			{
 				try
 				{
-					return strtoll(asString(root, field, "0").c_str(), nullptr, 10);
+					return stoll(asString(root, field, "0").c_str());
+				}
+				catch (exception &e)
+				{
+					return defaultValue;
+				}
+			}
+			else
+				return root.at(field);
+		}
+	}
+	catch (json::out_of_range &e)
+	{
+		return defaultValue;
+	}
+}
+
+uint64_t JSONUtils::asUint64(json root, string field, int64_t defaultValue, bool notFoundAsException)
+{
+	if (notFoundAsException && !isMetadataPresent(root, field))
+	{
+		string errorMessage = std::format(
+			"Field not found"
+			", field: {}",
+			field
+		);
+
+		throw JsonFieldNotFound(errorMessage);
+	}
+
+	if (root == nullptr)
+		return defaultValue;
+
+	try
+	{
+		if (field == "")
+		{
+			if (root.type() == json::value_t::string)
+			{
+				try
+				{
+					return stoull(asString(root, "", "0").c_str());
+				}
+				catch (exception &e)
+				{
+					return defaultValue;
+				}
+			}
+			else
+				return root.template get<uint64_t>();
+		}
+		else
+		{
+			if (!JSONUtils::isMetadataPresent(root, field) || JSONUtils::isNull(root, field))
+				return defaultValue;
+			if (root.at(field).type() == json::value_t::string)
+			{
+				try
+				{
+					return stoull(asString(root, field, "0").c_str());
 				}
 				catch (exception &e)
 				{

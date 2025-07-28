@@ -44,6 +44,7 @@ class JSONUtils
 	static int asInt(json root, string field = "", int defaultValue = 0, bool notFoundAsException = false);
 
 	static int64_t asInt64(json root, string field = "", int64_t defaultValue = 0, bool notFoundAsException = false);
+	static uint64_t asUint64(json root, string field = "", int64_t defaultValue = 0, bool notFoundAsException = false);
 
 	static double asDouble(json root, string field = "", double defaultValue = 0.0, bool notFoundAsException = false);
 
