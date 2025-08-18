@@ -38,5 +38,5 @@
 #set(JSONUtils_VERSION_MINOR 0)
 
 add_subdirectory(src)
-add_subdirectory(examples/json5)
+#add_subdirectory(examples/json5)
 
