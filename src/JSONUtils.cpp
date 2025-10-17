@@ -446,14 +446,14 @@ json JSONUtils::toJson(vector<string> v)
 	return root;
 }
 
-string JSONUtils::toString(json root)
+string JSONUtils::toString(json root, int indent)
 {
 	try
 	{
 		if (root == nullptr)
 			return "null";
 		else
-			return root.dump(-1, ' ', true);
+			return root.dump(indent, ' ', true);
 	}
 	catch (const json::type_error &e)
 	{

@@ -54,7 +54,7 @@ class JSONUtils
 
 	static json toJson(string json, bool warningIfError = false);
 
-	static string toString(json joValueRoot);
+	static string toString(json joValueRoot, int indent = -1);
 
 	static json toJson(vector<int32_t> v);
 	static json toJson(vector<string> v);
