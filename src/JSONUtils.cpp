@@ -109,7 +109,7 @@ json JSONUtils::loadConfigurationFile(const string_view &configurationPathName, 
 	string sConfigurationFile;
 	try
 	{
-		ifstream configurationFile(configurationPathName, ifstream::binary);
+		ifstream configurationFile(string(configurationPathName), ifstream::binary);
 		stringstream buffer;
 		buffer << configurationFile.rdbuf();
 		if (environmentPrefix.empty())
