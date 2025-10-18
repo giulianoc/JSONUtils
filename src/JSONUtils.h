@@ -448,10 +448,10 @@ class JSONUtils
 
 	static string json5ToJson(const string &json5);
 	static json loadConfigurationFile(const string_view &configurationPathName, const string_view &environmentPrefix);
+	static string applyEnvironmentToConfiguration(string configuration, const string_view &environmentPrefix);
 
   private:
 	static string json5_removeComments(const string &input);
 	static string json5_removeTrailingCommas(const string &input);
 	static string json5_quoteUnquotedKeys(const string &input);
-	static string applyEnvironmentToConfiguration(string configuration, const string_view &environmentPrefix);
 };

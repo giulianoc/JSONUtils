@@ -4,11 +4,10 @@
 #include <regex>
 
 #ifdef _WIN32
-extern char **_environ;
+	extern char **_environ;
 #else
 extern char **environ;
 #endif
-
 
 json JSONUtils::toJson(const string_view &j, bool warningIfError)
 {
@@ -23,9 +22,10 @@ json JSONUtils::toJson(const string_view &j, bool warningIfError)
 	{
 		string errorMessage = std::format(
 			"failed to parse the json"
-			", json: {}"
-			", at byte: {}",
-			j, ex.byte
+			", json: '{}'"
+			", at byte: {}"
+			", exception: {}",
+			j, ex.byte, ex.what()
 		);
 		if (warningIfError)
 			SPDLOG_WARN(errorMessage);
@@ -50,8 +50,9 @@ ordered_json JSONUtils::toOrderedJson(const string_view &j, bool warningIfError)
 		string errorMessage = std::format(
 			"failed to parse the json"
 			", json: {}"
-			", at byte: {}",
-			j, ex.byte
+			", at byte: {}"
+			", exception: {}",
+			j, ex.byte, ex.what()
 		);
 		if (warningIfError)
 			SPDLOG_WARN(errorMessage);
@@ -98,11 +99,11 @@ json JSONUtils::loadConfigurationFile(const string_view &configurationPathName, 
 {
 
 #ifdef BOOTSERVICE_DEBUG_LOG
-#ifdef _WIN32
-	ofstream of("C:\\bootservice.log", ofstream::app);
-#else
-	ofstream of("/tmp/bootservice.log", ofstream::app);
-#endif
+	#ifdef _WIN32
+		ofstream of("C:\\bootservice.log", ofstream::app);
+	#else
+		ofstream of("/tmp/bootservice.log", ofstream::app);
+	#endif
 	of << "loadConfigurationFile..." << endl;
 #endif
 
@@ -129,12 +130,12 @@ json JSONUtils::loadConfigurationFile(const string_view &configurationPathName, 
 	catch (exception &e)
 	{
 #ifdef BOOTSERVICE_DEBUG_LOG
-#ifdef _WIN32
+	#ifdef _WIN32
 		ofstream of("C:\\bootservice.log", ofstream::app);
-#else
+	#else
 		ofstream of("/tmp/bootservice.log", ofstream::app);
-#endif
-		of << "loadConfigurationFile failed, configurationPathName: " << configurationPathName << ", exception: " << e << endl;
+	#endif
+	of << "loadConfigurationFile failed, configurationPathName: " << configurationPathName << ", exception: " << e << endl;
 #endif
 		throw;
 	}
@@ -173,6 +174,9 @@ string JSONUtils::json5ToJson(const string &json5)
 	return cleaned;
 }
 
+// metodo aggiunto a JSONUtils solo perchè utilizzato da loadConfigurationFile.
+// Avevo pensato di aggiungerlo a StringUtils creando una dipendenza tra le due librerie.
+// Ho preferito evitare questa dipendenza.
 string JSONUtils::applyEnvironmentToConfiguration(string configuration, const string_view &environmentPrefix)
 {
 #ifdef _WIN32
@@ -181,21 +185,10 @@ string JSONUtils::applyEnvironmentToConfiguration(string configuration, const st
 	char **s = environ;
 #endif
 
-#ifdef BOOTSERVICE_DEBUG_LOG
-#ifdef _WIN32
-	ofstream of("C:\\bootservice.log", ofstream::app);
-#else
-	ofstream of("/tmp/bootservice.log", ofstream::app);
-#endif
-#endif
-
 	int envNumber = 0;
 	for (; *s; s++)
 	{
 		string envVariable = *s;
-#ifdef BOOTSERVICE_DEBUG_LOG
-//          of << "ENV " << *s << endl;
-#endif
 		if (envVariable.starts_with(environmentPrefix))
 		{
 			size_t endOfVarName = envVariable.find('=');
@@ -207,9 +200,6 @@ string JSONUtils::applyEnvironmentToConfiguration(string configuration, const st
 			// sarebbe \$\{CATRAMMSGUIAPPS_PATH\}
 			string envLabel = std::format(R"(\$\{{{}\}})", envVariable.substr(0, endOfVarName));
 			string envValue = envVariable.substr(endOfVarName + 1);
-#ifdef BOOTSERVICE_DEBUG_LOG
-			of << "ENV " << envLabel << ": " << envValue << endl;
-#endif
 			configuration = regex_replace(configuration, regex(envLabel), envValue);
 		}
 	}
