@@ -14,6 +14,7 @@
 #pragma once
 
 #include <utility>
+#include <iostream>
 
 #include "nlohmann/json.hpp"
 #include "spdlog/spdlog.h"
@@ -85,15 +86,26 @@ class JSONUtils
 		{
 			if (field.empty())
 			{
-				if (root.type() == json::value_t::number_integer)
-					return to_string(root.template get<int>());
-				if (root.type() == json::value_t::number_float)
+				switch (root.type())
+				{
+				case json::value_t::number_integer:
+					return std::format("{}", root.template get<int>());
+				case json::value_t::number_unsigned:
+					return std::format("{}", root.template get<unsigned>());
+				case json::value_t::boolean:
+					return std::format("{}", root.template get<bool>());
+				case json::value_t::number_float:
 					return to_string(root.template get<float>());
-				if (root.type() == json::value_t::object)
+				case json::value_t::object:
 					return toString(root);
-				if (root.type() == json::value_t::array)
+				case json::value_t::array:
 					return toString(root);
-				return root.template get<string>();
+				case json::value_t::string:
+					return root.template get<string>();
+				default:
+					SPDLOG_ERROR("asString, type not managed: {}", static_cast<int>(root.type()));
+					return string(defaultValue);
+				}
 			}
 
 			if (!JSONUtils::isMetadataPresent(root, field) || JSONUtils::isNull(root, field))

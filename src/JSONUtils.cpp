@@ -15,8 +15,7 @@ json JSONUtils::toJson(const string_view &j, bool warningIfError)
 	{
 		if (j.empty())
 			return {};
-		else
-			return json::parse(j);
+		return json::parse(j);
 	}
 	catch (json::parse_error &ex)
 	{
@@ -42,8 +41,7 @@ ordered_json JSONUtils::toOrderedJson(const string_view &j, bool warningIfError)
 	{
 		if (j.empty())
 			return {};
-		else
-			return ordered_json::parse(j);
+		return ordered_json::parse(j);
 	}
 	catch (json::parse_error &ex)
 	{
