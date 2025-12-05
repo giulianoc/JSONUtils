@@ -136,7 +136,7 @@ json JSONUtils::loadConfigurationFile(const string_view &configurationPathName, 
 	of << "loadConfigurationFile failed "
 		<< ", configurationPathName: " << configurationPathName
 		<< ", sConfigurationFile: " << sConfigurationFile
-		<< ", exception: " << e << endl;
+		<< ", exception: " << e.what() << endl;
 #endif
 		throw;
 	}
