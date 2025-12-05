@@ -116,6 +116,11 @@ json JSONUtils::loadConfigurationFile(const string_view &configurationPathName, 
 		else
 			sConfigurationFile = applyEnvironmentToConfiguration(buffer.str(), environmentPrefix);
 
+#ifdef BOOTSERVICE_DEBUG_LOG
+		of << "loadConfigurationFile "
+			<< ", sConfigurationFile: " << sConfigurationFile;
+#endif
+
 		json configurationRoot = json::parse(
 			sConfigurationFile,
 			nullptr, // callback
@@ -128,11 +133,6 @@ json JSONUtils::loadConfigurationFile(const string_view &configurationPathName, 
 	catch (exception &e)
 	{
 #ifdef BOOTSERVICE_DEBUG_LOG
-	#ifdef _WIN32
-		ofstream of("C:\\bootservice.log", ofstream::app);
-	#else
-		ofstream of("/tmp/bootservice.log", ofstream::app);
-	#endif
 	of << "loadConfigurationFile failed "
 		<< ", configurationPathName: " << configurationPathName
 		<< ", sConfigurationFile: " << sConfigurationFile
