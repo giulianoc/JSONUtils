@@ -33,6 +33,8 @@ include_directories("${SPDLOG_INCLUDE_DIR}")
 
 add_library (JSONUtils SHARED ${SOURCES} ${HEADERS})
 
+#target_compile_definitions(JSONUtils PRIVATE BOOTSERVICE_DEBUG_LOG)
+
 if(ZORAC)
 	install (TARGETS JSONUtils DESTINATION services/cms-import)
 	install (TARGETS JSONUtils DESTINATION services/cms-pusher)
