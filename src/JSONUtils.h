@@ -459,7 +459,7 @@ class JSONUtils
 	static ordered_json toOrderedJson(const vector<string> &v);
 
 	static string json5ToJson(const string &json5);
-	static json loadConfigurationFile(const string_view &configurationPathName, const string_view &environmentPrefix);
+	static json loadConfigurationFile(const string_view &configurationPathName, const string_view &environmentPrefix = "");
 	static string applyEnvironmentToConfiguration(string configuration, const string_view &environmentPrefix);
 
   private:

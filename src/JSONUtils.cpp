@@ -133,7 +133,10 @@ json JSONUtils::loadConfigurationFile(const string_view &configurationPathName, 
 	#else
 		ofstream of("/tmp/bootservice.log", ofstream::app);
 	#endif
-	of << "loadConfigurationFile failed, configurationPathName: " << configurationPathName << ", exception: " << e << endl;
+	of << "loadConfigurationFile failed "
+		<< ", configurationPathName: " << configurationPathName
+		<< ", sConfigurationFile: " << sConfigurationFile
+		<< ", exception: " << e << endl;
 #endif
 		throw;
 	}
