@@ -9,7 +9,7 @@
 extern char **environ;
 #endif
 
-json JSONUtils::toJson(const string_view &j, bool warningIfError)
+json JSONUtils::toJson(const string_view &j, const bool warningIfError)
 {
 	try
 	{
@@ -35,7 +35,7 @@ json JSONUtils::toJson(const string_view &j, bool warningIfError)
 	}
 }
 
-ordered_json JSONUtils::toOrderedJson(const string_view &j, bool warningIfError)
+ordered_json JSONUtils::toOrderedJson(const string_view &j, const bool warningIfError)
 {
 	try
 	{
