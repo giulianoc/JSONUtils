@@ -10,31 +10,6 @@
 
 #include "JSONUtils.h"
 
-/* Esempi di uso:
-
-// simile a javascript
-auto first = jpath(root)["items"][0]["name"].as<string>();
-
-// Config safe con default
-_apiProtocol = jpath(configurationRoot)
-		.optional()["mms"]["api"]["protocol"]
-		.as<string>("https");
-
-// Campo obbligatorio
-int64_t port = jpath(configurationRoot)
-		.required()["server"]["port"]
-		.as<int64_t>();
-
-// Optional typed
-auto avgBandwidth = jpath(root)
-		.optional()["stats"]["avgBandwidth"]
-		.as<uint64_t>();
-
-// check presenza
-if (jpath(root)["mms"]["api"].exists())
-	...
-*/
-
 template <typename J>
 requires (std::is_same_v<J, json> || std::is_same_v<J, ordered_json>)
 class JsonPath
@@ -95,6 +70,23 @@ public:
     [[nodiscard]] bool exists() const noexcept
     {
         return _root != nullptr;
+    }
+
+	[[nodiscard]] bool empty() const
+    {
+    	if (!_root)
+    		return true; // se il nodo non esiste è vuoto
+
+    	if (_root->is_null())
+    		return true;
+
+    	if (_root->is_object())
+    		return _root->empty();
+
+    	if (_root->is_array())
+    		return _root->empty();
+
+    	return false;
     }
 
 	template <typename T>

@@ -1073,8 +1073,8 @@ class JSONUtils
 	requires is_same_v<J, json> || is_same_v<J, ordered_json>
 	static J toJson(const vector<T> &v)
 	{
-		json root = J::array();
-		for (T& i : v)
+		J root = J::array();
+		for (const T& i : v)
 			root.push_back(i);
 		return root;
 	}
