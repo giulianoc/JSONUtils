@@ -21,27 +21,17 @@
 # with the authors.
 
 SET (SOURCES
-		JSONUtils.cpp
+        json-path.cpp
 )
 
 SET (HEADERS
-		JSONUtils.h
-		JsonPath.h
 )
 
 include_directories("${NLOHMANN_INCLUDE_DIR}")
 include_directories("${SPDLOG_INCLUDE_DIR}")
+include_directories("${JSONUTILS_INCLUDE_DIR}")
 
-add_library (JSONUtils SHARED ${SOURCES} ${HEADERS})
+add_executable(json-path ${SOURCES} ${HEADERS})
 
-#target_compile_definitions(JSONUtils PRIVATE BOOTSERVICE_DEBUG_LOG)
-
-if(ZORAC)
-	install (TARGETS JSONUtils DESTINATION services/cms-import)
-	install (TARGETS JSONUtils DESTINATION services/cms-pusher)
-	install (TARGETS JSONUtils DESTINATION services/cms-getter)
-else()
-	install (TARGETS JSONUtils DESTINATION lib)
-	install (FILES ${HEADERS} DESTINATION include)
-endif()
+target_link_libraries (json-path JSONUtils)
 

@@ -39,6 +39,8 @@
 
 add_subdirectory(src)
 if(JSONUTILS_EXAMPLES)
+    add_subdirectory(examples/as)
     add_subdirectory(examples/json)
+    add_subdirectory(examples/json-path)
     add_subdirectory(examples/json5)
 endif()
