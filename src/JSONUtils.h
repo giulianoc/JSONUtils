@@ -20,14 +20,6 @@
 #include <iostream>
 #include <fstream>
 
-/*
-using namespace std;
-
-using json = nlohmann::json;
-using ordered_json = nlohmann::ordered_json;
-using namespace nlohmann::literals;
-*/
-
 struct JsonFieldNotFound final : public std::exception
 {
 	std::string _errorMessage;
