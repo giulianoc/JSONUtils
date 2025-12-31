@@ -11,7 +11,7 @@
 #include "JSONUtils.h"
 
 template <typename J>
-requires (std::is_same_v<J, json> || std::is_same_v<J, ordered_json>)
+requires (std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>)
 class JsonPath
 {
 public:
@@ -104,7 +104,7 @@ public:
     	}
     	catch (const std::exception &e)
     	{
-    		const string errorMessage = std::format("Error accessing JSON field '{}': {}", _path, e.what());
+    		const std::string errorMessage = std::format("Error accessing JSON field '{}': {}", _path, e.what());
     		SPDLOG_ERROR(errorMessage);
     		throw std::runtime_error(errorMessage);
     	}
@@ -124,7 +124,7 @@ public:
     	}
     	catch (const std::exception &e)
     	{
-    		const string errorMessage = std::format("Error accessing JSON field '{}': {}", _path, e.what());
+    		const std::string errorMessage = std::format("Error accessing JSON field '{}': {}", _path, e.what());
     		SPDLOG_ERROR(errorMessage);
     		throw std::runtime_error(errorMessage);
     	}

@@ -25,6 +25,10 @@
 #include "JsonPath.h"
 #include <iostream>
 
+using namespace std;
+using json = nlohmann::json;
+using ordered_json = nlohmann::ordered_json;
+
 int main()
 {
 
