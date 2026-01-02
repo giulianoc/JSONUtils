@@ -21,8 +21,8 @@ public:
         Optional
     };
 
-    explicit JsonPath(const J* j = nullptr, const AccessMode mode = AccessMode::Optional, std::string path = {})
-        : _root(j), _mode(mode), _path(std::move(path))
+    explicit JsonPath(const J* j = nullptr, const AccessMode mode = AccessMode::Optional)
+        : _root(j), _mode(mode)
     {}
 
     [[nodiscard]] JsonPath required() const
@@ -43,14 +43,14 @@ public:
 			: std::format("{}.{}", _path, key);
 
 		if (!_root || !_root->is_object())
-			return missing(nextPath);
+			return jsonPathMissing(nextPath);
 
 		if (!JSONUtils::isPresent(*_root, key))
-			return missing(nextPath);
+			return jsonPathMissing(nextPath);
 
 		auto it = _root->find(std::string(key));
 		if (it == _root->end())
-			return missing(nextPath);
+			return jsonPathMissing(nextPath);
 
 		return JsonPath(&(*it), _mode, nextPath);
 	}
@@ -62,7 +62,7 @@ public:
             : std::format("{}[{}]", _path, index);
 
         if (!_root || !_root->is_array() || index >= _root->size())
-            return missing(nextPath);
+            return jsonPathMissing(nextPath);
 
         return JsonPath(&((*_root)[index]), _mode, nextPath);
     }
@@ -90,11 +90,11 @@ public:
     }
 
 	template <typename T>
-    [[nodiscard]] T as(T defaultValue, const bool exceptionOnMissing = false) const
+    [[nodiscard]] T as(T defaultValue = {}) const
     {
         if (!_root)
         {
-            if (_mode == AccessMode::Required || exceptionOnMissing)
+            if (_mode == AccessMode::Required)
                 throw JsonFieldNotFound(missingMessage());
             return defaultValue;
         }
@@ -138,12 +138,16 @@ private:
     AccessMode _mode;
     std::string _path;
 
-    [[nodiscard]] std::string missingMessage() const
+	explicit JsonPath(const J* j, const AccessMode mode, std::string path)
+		: _root(j), _mode(mode), _path(std::move(path))
+	{}
+
+	[[nodiscard]] std::string missingMessage() const
     {
         return std::format("Missing required JSON field: {}", _path);
     }
 
-    [[nodiscard]] JsonPath missing(const std::string& nextPath) const
+    [[nodiscard]] JsonPath jsonPathMissing(const std::string& nextPath) const
     {
         if (_mode == AccessMode::Required)
             throw JsonFieldNotFound(std::format("Missing required JSON field: {}", nextPath));
