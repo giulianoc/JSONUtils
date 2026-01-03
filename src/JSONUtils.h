@@ -20,11 +20,11 @@
 #include <iostream>
 #include <fstream>
 
-struct JsonFieldNotFound final : public std::exception
+struct JsonFieldNotFound final : std::exception
 {
 	std::string _errorMessage;
 
-	explicit JsonFieldNotFound(std::string_view errorMessage):_errorMessage(errorMessage){};
+	explicit JsonFieldNotFound(const std::string_view errorMessage):_errorMessage(errorMessage){};
 
 	[[nodiscard]] char const *what() const noexcept override { return _errorMessage.c_str(); };
 };

@@ -95,7 +95,7 @@ public:
         if (!_root)
         {
             if (_mode == AccessMode::Required)
-                throw JsonFieldNotFound(missingMessage());
+                throw JsonFieldNotFound(std::format("Missing required JSON field: {}", _path));
             return defaultValue;
         }
     	try
@@ -115,7 +115,7 @@ public:
     {
         if (!_root) {
             if (_mode == AccessMode::Required)
-                throw JsonFieldNotFound(missingMessage());
+                throw JsonFieldNotFound(std::format("Missing required JSON field: {}", _path));
             return std::nullopt;
         }
     	try
@@ -141,11 +141,6 @@ private:
 	explicit JsonPath(const J* j, const AccessMode mode, std::string path)
 		: _root(j), _mode(mode), _path(std::move(path))
 	{}
-
-	[[nodiscard]] std::string missingMessage() const
-    {
-        return std::format("Missing required JSON field: {}", _path);
-    }
 
     [[nodiscard]] JsonPath jsonPathMissing(const std::string& nextPath) const
     {
