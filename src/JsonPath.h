@@ -120,7 +120,7 @@ public:
         }
     	try
     	{
-    		return JSONUtils::asOpt<T>(*_root, "", false);
+    		return JSONUtils::asOpt<T>(*_root);
     	}
     	catch (const std::exception &e)
     	{
