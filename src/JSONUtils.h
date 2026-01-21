@@ -14,7 +14,7 @@
 #pragma once
 
 #include "nlohmann/json.hpp"
-#include "spdlog/spdlog.h"
+#include "ThreadLogger.h"
 #include <format>
 #include <utility>
 #include <iostream>
@@ -84,7 +84,7 @@ class JSONUtils
 				if (exceptionOnMissing)
 				{
 					const std::string errorMessage = std::format("Field [{}] not found", field);
-					SPDLOG_ERROR(errorMessage);
+					LOG_ERROR(errorMessage);
 					throw JsonFieldNotFound(errorMessage);
 				}
 				return defaultVal;
@@ -96,7 +96,7 @@ class JSONUtils
 				if (exceptionOnMissing)
 				{
 					std::string errorMessage = std::format("Field [{}] not found", field);
-					SPDLOG_ERROR(errorMessage);
+					LOG_ERROR(errorMessage);
 					throw JsonFieldNotFound(errorMessage);
 				}
 				return defaultVal;
@@ -111,7 +111,7 @@ class JSONUtils
 				errorMessage = std::format("Json: {}, exception: {}", JSONUtils::toString(root), e.what());
 			else
 				errorMessage = std::format("Field: {}, exception: {}", field, e.what());
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 			throw;
 		}
 	}
@@ -145,7 +145,7 @@ class JSONUtils
 				errorMessage = std::format("Json: {}, exception: {}", JSONUtils::toString(root), e.what());
 			else
 				errorMessage = std::format("Field: {}, exception: {}", field, e.what());
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 			throw;
 		}
 	}
@@ -162,7 +162,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -191,7 +191,7 @@ class JSONUtils
 				case nlohmann::json::value_t::string:
 					return root.template get<std::string>();
 				default:
-					SPDLOG_ERROR("asString, type not managed: {}", static_cast<int>(root.type()));
+					LOG_ERROR("asString, type not managed: {}", static_cast<int>(root.type()));
 					return std::string(defaultValue);
 				}
 			}
@@ -233,7 +233,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -262,7 +262,7 @@ class JSONUtils
 				case nlohmann::json::value_t::string:
 					return root.template get<std::string>();
 				default:
-					SPDLOG_ERROR("asString, type not managed: {}", static_cast<int>(root.type()));
+					LOG_ERROR("asString, type not managed: {}", static_cast<int>(root.type()));
 					return std::nullopt;
 				}
 			}
@@ -300,7 +300,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -367,7 +367,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -434,7 +434,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -501,7 +501,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -568,7 +568,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -635,7 +635,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -702,7 +702,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -769,7 +769,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -836,7 +836,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -907,7 +907,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -978,7 +978,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -1013,7 +1013,7 @@ class JSONUtils
 				", field: {}",
 				field
 			);
-			SPDLOG_ERROR(errorMessage);
+			LOG_ERROR(errorMessage);
 
 			throw JsonFieldNotFound(errorMessage);
 		}
@@ -1057,9 +1057,9 @@ class JSONUtils
 				j, ex.byte, ex.what()
 			);
 			if (warningIfError)
-				SPDLOG_WARN(errorMessage);
+				LOG_WARN(errorMessage);
 			else
-				SPDLOG_ERROR(errorMessage);
+				LOG_ERROR(errorMessage);
 
 			throw std::runtime_error(errorMessage);
 		}

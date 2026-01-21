@@ -29,9 +29,13 @@ SET (HEADERS
 
 include_directories("${NLOHMANN_INCLUDE_DIR}")
 include_directories("${SPDLOG_INCLUDE_DIR}")
+include_directories("${THREADLOGGER_INCLUDE_DIR}")
 include_directories("${JSONUTILS_INCLUDE_DIR}")
 
 add_executable(as ${SOURCES} ${HEADERS})
 
+link_directories(${THREADLOGGER_LIB_DIR})
+
+target_link_libraries (as ThreadLogger)
 target_link_libraries (as JSONUtils)
 

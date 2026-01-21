@@ -105,7 +105,7 @@ public:
     	catch (const std::exception &e)
     	{
     		const std::string errorMessage = std::format("Error accessing JSON field '{}': {}", _path, e.what());
-    		SPDLOG_ERROR(errorMessage);
+    		LOG_ERROR(errorMessage);
     		throw std::runtime_error(errorMessage);
     	}
     }
@@ -125,7 +125,7 @@ public:
     	catch (const std::exception &e)
     	{
     		const std::string errorMessage = std::format("Error accessing JSON field '{}': {}", _path, e.what());
-    		SPDLOG_ERROR(errorMessage);
+    		LOG_ERROR(errorMessage);
     		throw std::runtime_error(errorMessage);
     	}
     }

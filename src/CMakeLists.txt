@@ -31,9 +31,13 @@ SET (HEADERS
 
 include_directories("${NLOHMANN_INCLUDE_DIR}")
 include_directories("${SPDLOG_INCLUDE_DIR}")
+include_directories("${THREADLOGGER_INCLUDE_DIR}")
 
 add_library (JSONUtils SHARED ${SOURCES} ${HEADERS})
 
+if(APPLE)
+	link_directories(${THREADLOGGER_LIBRARY_DIR})
+endif()
 #target_compile_definitions(JSONUtils PRIVATE BOOTSERVICE_DEBUG_LOG)
 
 if(ZORAC)
