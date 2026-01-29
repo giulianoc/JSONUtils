@@ -75,6 +75,14 @@ class JSONUtils
 	}
 
 	template <typename T, typename J>
+	static T as(const J& root, std::string_view field, T defaultVal, std::initializer_list<T> allowedValues,
+		const bool exceptionOnError = false)
+	{
+		return as<T>(root, field, std::move(defaultVal),
+			std::span<const T>(allowedValues.begin(), allowedValues.size()), exceptionOnError);
+	}
+
+	template <typename T, typename J>
 	static T as(const J& root, std::string_view field = {}, T defaultVal = {}, std::span<const T> allowedValues = {},
 		const bool exceptionOnError = false)
 	{
@@ -202,6 +210,14 @@ class JSONUtils
 		if (!root)
 			return defaultVal;
 		return as(*root, field, defaultVal, exceptionOnMissing);
+	}
+
+	template <typename T, typename J>
+	static std::optional<T> asOpt(const J& root, std::string_view field, std::initializer_list<T> allowedValues,
+		const bool exceptionOnError = false)
+	{
+		return asOpt<T>(root, field, std::span<const T>(allowedValues.begin(), allowedValues.size()),
+			exceptionOnError);
 	}
 
 	template <typename T, typename J>
