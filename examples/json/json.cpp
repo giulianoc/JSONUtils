@@ -38,12 +38,12 @@ int main()
     })";
 
 	// path not existing, default value returned
-	cout << "value: " << JSONUtils::toString(JSONUtils::asJson(j, "nonExistingKey", json(nullptr))) << endl << endl;
-	cout << "value: " << JSONUtils::asInt32(j, "nonExistingKey", 43) << endl << endl;
+	cout << "value: " << JSONUtils::toString(JSONUtils::as<json>(j, "nonExistingKey", json(nullptr))) << endl << endl;
+	cout << "value: " << JSONUtils::as<int32_t>(j, "nonExistingKey", 43) << endl << endl;
 	if (j.contains("key") && j["key"].is_object()) {
 		const json &k = j["key"];
 		if (k.contains("key2") && k["key2"].is_object()) {
-			cout << "value: " << JSONUtils::asInt32(k["key2"], "value", 42) << endl << endl;
+			cout << "value: " << JSONUtils::as<int32_t>(k["key2"], "value", 42) << endl << endl;
 		}
 	}
 }

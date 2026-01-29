@@ -13,12 +13,12 @@
 
 #pragma once
 
-#include "nlohmann/json.hpp"
 #include "ThreadLogger.h"
+#include "nlohmann/json.hpp"
 #include <format>
-#include <utility>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <spdlog/fmt/bundled/ranges.h>
 
 struct JsonFieldNotFound final : std::exception
 {
@@ -75,44 +75,124 @@ class JSONUtils
 	}
 
 	template <typename T, typename J>
-	static T as(const J& root, std::string_view field = {}, T defaultVal = {}, const bool exceptionOnMissing = false)
+	static T as(const J& root, std::string_view field = {}, T defaultVal = {}, std::span<const T> allowedValues = {},
+		const bool exceptionOnError = false)
 	{
 		try
 		{
 			if (root == nullptr)
 			{
-				if (exceptionOnMissing)
+				const std::string errorMessage = "Received a json nullptr";
+				if (exceptionOnError)
 				{
-					const std::string errorMessage = std::format("Field [{}] not found", field);
 					LOG_ERROR(errorMessage);
-					throw JsonFieldNotFound(errorMessage);
+					throw std::invalid_argument(errorMessage);
 				}
+				LOG_WARN(errorMessage);
 				return defaultVal;
 			}
 			if (field.empty())
-				return root.template get<T>();
+			{
+				T value = root.template get<T>();
+
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+
+					std::string errorMessage;
+					if constexpr (
+						std::is_same_v<T, nlohmann::json> ||
+						std::is_same_v<T, nlohmann::ordered_json>
+					)
+					{
+						std::vector<std::string> tmp;
+						tmp.reserve(allowedValues.size());
+						for (const auto& v : allowedValues)
+							tmp.push_back(JSONUtils::toString(v));
+						std::string allowedValuesStr = fmt::format("{}", fmt::join(tmp, ", "));
+						errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							JSONUtils::toString(value), field, allowedValuesStr
+						);
+					}
+					else
+						errorMessage = fmt::format("Invalid value '{}' for '{}'. Allowed values are: {}",
+						value, field, fmt::join(allowedValues, ", ")
+						);
+					if (exceptionOnError)
+					{
+						LOG_ERROR(errorMessage);
+						throw std::invalid_argument(errorMessage);
+					}
+					LOG_WARN(errorMessage);
+					return defaultVal;
+				}
+				return value;
+			}
 			if (!JSONUtils::isPresent(root, field))
 			{
-				if (exceptionOnMissing)
+				const std::string errorMessage = std::format("Field [{}] not found", field);
+				if (exceptionOnError)
 				{
-					std::string errorMessage = std::format("Field [{}] not found", field);
 					LOG_ERROR(errorMessage);
 					throw JsonFieldNotFound(errorMessage);
 				}
+				LOG_WARN(errorMessage);
 				return defaultVal;
 			}
-			return root.at(field).template get<T>();
+			{
+				T value = root.at(field).template get<T>();
+
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+
+					std::string errorMessage;
+					if constexpr (
+						std::is_same_v<T, nlohmann::json> ||
+						std::is_same_v<T, nlohmann::ordered_json>
+					)
+					{
+						std::vector<std::string> tmp;
+						tmp.reserve(allowedValues.size());
+						for (const auto& v : allowedValues)
+							tmp.push_back(JSONUtils::toString(v));
+						std::string allowedValuesStr = fmt::format("{}", fmt::join(tmp, ", "));
+						errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							JSONUtils::toString(value), field, allowedValuesStr
+						);
+					}
+					else
+						errorMessage = fmt::format("Invalid value '{}' for '{}'. Allowed values are: {}",
+						value, field, fmt::join(allowedValues, ", ")
+						);
+					if (exceptionOnError)
+					{
+						LOG_ERROR(errorMessage);
+						throw std::invalid_argument(errorMessage);
+					}
+					LOG_WARN(errorMessage);
+					return defaultVal;
+				}
+				return value;
+			}
 		}
-		catch (const std::exception & e)
+		catch (const std::exception& e)
 		{
 			// abbiamo una eccezione se ad es. chiediamo una stringa (as<string>) ma il valore è un numero
-			std::string errorMessage;
-			if (field.empty())
-				errorMessage = std::format("Json: {}, exception: {}", JSONUtils::toString(root), e.what());
-			else
-				errorMessage = std::format("Field: {}, exception: {}", field, e.what());
-			LOG_ERROR(errorMessage);
-			throw;
+			const std::string errorMessage = field.empty() ?
+				std::format("Json: {}, exception: {}", JSONUtils::toString(root), e.what()) :
+				std::format("Field: {}, exception: {}", field, e.what());
+			if (exceptionOnError)
+			{
+				LOG_ERROR(errorMessage);
+				throw;
+			}
+			LOG_WARN(errorMessage);
+			return defaultVal;
 		}
 	}
 
@@ -125,37 +205,126 @@ class JSONUtils
 	}
 
 	template <typename T, typename J>
-	static std::optional<T> asOpt(const J& root, std::string_view field = {})
+	static std::optional<T> asOpt(const J& root, std::string_view field = {}, std::span<const T> allowedValues = {},
+		const bool exceptionOnError = false)
 	{
 		try
 		{
 			if (root == nullptr)
+			{
+				const std::string errorMessage = "Received a json nullptr";
+				if (exceptionOnError)
+				{
+					LOG_ERROR(errorMessage);
+					throw std::invalid_argument(errorMessage);
+				}
+				LOG_WARN(errorMessage);
 				return std::nullopt;
+			}
 			if (field.empty())
-				return root.template get<T>();
+			{
+				T value = root.template get<T>();
+
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+
+					std::string errorMessage;
+					if constexpr (
+						std::is_same_v<T, nlohmann::json> ||
+						std::is_same_v<T, nlohmann::ordered_json>
+					)
+					{
+						std::vector<std::string> tmp;
+						tmp.reserve(allowedValues.size());
+						for (const auto& v : allowedValues)
+							tmp.push_back(JSONUtils::toString(v));
+						std::string allowedValuesStr = fmt::format("{}", fmt::join(tmp, ", "));
+						errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							JSONUtils::toString(value), field, allowedValuesStr
+						);
+					}
+					else
+						errorMessage = fmt::format("Invalid value '{}' for '{}'. Allowed values are: {}",
+						value, field, fmt::join(allowedValues, ", ")
+						);
+					if (exceptionOnError)
+					{
+						LOG_ERROR(errorMessage);
+						throw std::invalid_argument(errorMessage);
+					}
+					LOG_WARN(errorMessage);
+					return std::nullopt;
+				}
+				return value;
+			}
 			if (!JSONUtils::isPresent(root, field))
 				return std::nullopt;
-			return root.at(field).template get<T>();
+			{
+				T value = root.at(field).template get<T>();
+
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+
+					std::string errorMessage;
+					if constexpr (
+						std::is_same_v<T, nlohmann::json> ||
+						std::is_same_v<T, nlohmann::ordered_json>
+					)
+					{
+						std::vector<std::string> tmp;
+						tmp.reserve(allowedValues.size());
+						for (const auto& v : allowedValues)
+							tmp.push_back(JSONUtils::toString(v));
+						std::string allowedValuesStr = fmt::format("{}", fmt::join(tmp, ", "));
+						errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							JSONUtils::toString(value), field, allowedValuesStr
+						);
+					}
+					else
+						errorMessage = fmt::format("Invalid value '{}' for '{}'. Allowed values are: {}",
+						value, field, fmt::join(allowedValues, ", ")
+						);
+					if (exceptionOnError)
+					{
+						LOG_ERROR(errorMessage);
+						throw std::invalid_argument(errorMessage);
+					}
+					LOG_WARN(errorMessage);
+					return std::nullopt;
+				}
+				return value;
+			}
 		}
-		catch (const std::exception & e)
+		catch (const std::exception& e)
 		{
 			// abbiamo una eccezione se ad es. chiediamo una stringa (as<string>) ma il valore è un numero
-			std::string errorMessage;
-			if (field.empty())
-				errorMessage = std::format("Json: {}, exception: {}", JSONUtils::toString(root), e.what());
-			else
-				errorMessage = std::format("Field: {}, exception: {}", field, e.what());
-			LOG_ERROR(errorMessage);
-			throw;
+			const std::string errorMessage = field.empty() ?
+				std::format("Json: {}, exception: {}", JSONUtils::toString(root), e.what()) :
+				std::format("Field: {}, exception: {}", field, e.what());
+			if (exceptionOnError)
+			{
+				LOG_ERROR(errorMessage);
+				throw;
+			}
+			LOG_WARN(errorMessage);
+			return std::nullopt;
 		}
 	}
 
+	/*
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	// [[deprecated("This method is deprecated. Use as<string>() instead.")]]
-	static std::string asString(const J &root, std::string_view field = "", const std::string_view defaultValue = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<string>() instead.")]]
+	static std::string asString(const J &root, std::string_view field = "", const std::string_view defaultValue = "",
+		std::span<const std::string_view> allowedValues = {}, const bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -163,7 +332,6 @@ class JSONUtils
 				field
 			);
 			LOG_ERROR(errorMessage);
-
 			throw JsonFieldNotFound(errorMessage);
 		}
 
@@ -174,46 +342,107 @@ class JSONUtils
 		{
 			if (field.empty())
 			{
+				std::string value;
 				switch (root.type())
 				{
 				case nlohmann::json::value_t::number_integer:
-					return std::format("{}", root.template get<int>());
+				{
+					value = std::format("{}", root.template get<int>());
+					break;
+				}
 				case nlohmann::json::value_t::number_unsigned:
-					return std::format("{}", root.template get<unsigned>());
+				{
+					value = std::format("{}", root.template get<unsigned>());
+					break;
+				}
 				case nlohmann::json::value_t::boolean:
-					return std::format("{}", root.template get<bool>());
+				{
+					value = std::format("{}", root.template get<bool>());
+					break;
+				}
 				case nlohmann::json::value_t::number_float:
-					return std::format("{}", root.template get<float>());
+				{
+					value = std::format("{}", root.template get<float>());
+					break;
+				}
 				case nlohmann::json::value_t::object:
-					return toString(root);
 				case nlohmann::json::value_t::array:
-					return toString(root);
+				{
+					value = toString(root);
+					break;
+				}
 				case nlohmann::json::value_t::string:
-					return root.template get<std::string>();
+				{
+					value = root.template get<std::string>();
+					break;
+				}
 				default:
 					LOG_ERROR("asString, type not managed: {}", static_cast<int>(root.type()));
 					return std::string(defaultValue);
 				}
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+					{
+						std::string errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							value, field, fmt::join(allowedValues, ", ")
+						);
+						LOG_ERROR(errorMessage);
+						if (exceptionOnError)
+							throw std::invalid_argument(errorMessage);
+						return std::string(defaultValue);
+					}
+				}
+				return value;
 			}
 
-			if (!isPresent(root, field) || JSONUtils::isNull(root, field))
-				return std::string(defaultValue);
-			if (root.at(field).type() == nlohmann::json::value_t::number_integer)
-				return std::to_string(root.at(field).template get<int>());
-			if (root.at(field).type() == nlohmann::json::value_t::number_float)
-				return std::to_string(root.at(field).template get<double>());
-			if (root.at(field).type() == nlohmann::json::value_t::boolean)
-				return std::to_string(static_cast<int>(root.at(field).template get<bool>()));
-			return root.at(field);
+			{
+				std::string value;
+				if (!isPresent(root, field) || JSONUtils::isNull(root, field))
+					return std::string(defaultValue);
+				if (root.at(field).type() == nlohmann::json::value_t::number_integer
+					|| root.at(field).type() == nlohmann::json::value_t::number_float
+					|| root.at(field).type() == nlohmann::json::value_t::boolean)
+					value = std::format("{}", root.at(field));
+				else
+					value = root.at(field);
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+					{
+						std::string errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							value, field, fmt::join(allowedValues, ", ")
+						);
+						LOG_ERROR(errorMessage);
+						if (exceptionOnError)
+							throw std::invalid_argument(errorMessage);
+						return std::string(defaultValue);
+					}
+				}
+				return value;
+			}
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asString failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_ERROR(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return std::string(defaultValue);
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
+	[[deprecated("This method is deprecated. Use as<string>() instead.")]]
 	static std::string asString(const J *root, std::string_view field = "", const std::string_view defaultValue = "",
 		bool exceptionOnMissing = false)
 	{
@@ -224,18 +453,19 @@ class JSONUtils
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<std::string> asOptString(const J &root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use asOpt<string>() instead.")]]
+	static std::optional<std::string> asOptString(const J &root, std::string_view field = "",
+		std::span<const std::string_view> allowedValues = {}, bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (!field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
 				", field: {}",
 				field
 			);
-			LOG_ERROR(errorMessage);
-
-			throw JsonFieldNotFound(errorMessage);
+			LOG_WARN(errorMessage);
+			return std::nullopt;
 		}
 
 		if (root == nullptr)
@@ -245,43 +475,107 @@ class JSONUtils
 		{
 			if (field.empty())
 			{
+				std::string value;
 				switch (root.type())
 				{
 				case nlohmann::json::value_t::number_integer:
-					return std::format("{}", root.template get<int>());
+				{
+					value = std::format("{}", root.template get<int>());
+					break;
+				}
 				case nlohmann::json::value_t::number_unsigned:
-					return std::format("{}", root.template get<unsigned>());
+				{
+					value = std::format("{}", root.template get<unsigned>());
+					break;
+				}
 				case nlohmann::json::value_t::boolean:
-					return std::format("{}", root.template get<bool>());
+				{
+					value = std::format("{}", root.template get<bool>());
+					break;
+				}
 				case nlohmann::json::value_t::number_float:
-					return std::format("{}", root.template get<float>());
+				{
+					value = std::format("{}", root.template get<float>());
+					break;
+				}
 				case nlohmann::json::value_t::object:
-					return toString(root);
 				case nlohmann::json::value_t::array:
-					return toString(root);
+				{
+					value = toString(root);
+					break;
+				}
 				case nlohmann::json::value_t::string:
-					return root.template get<std::string>();
+				{
+					value = root.template get<std::string>();
+					break;
+				}
 				default:
 					LOG_ERROR("asString, type not managed: {}", static_cast<int>(root.type()));
 					return std::nullopt;
 				}
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+					{
+						std::string errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							value, field, fmt::join(allowedValues, ", ")
+						);
+						LOG_ERROR(errorMessage);
+						if (exceptionOnError)
+							throw std::invalid_argument(errorMessage);
+						return std::nullopt;
+					}
+				}
+				return value;
 			}
 
-			if (!isPresent(root, field) || JSONUtils::isNull(root, field))
-				return std::nullopt;
-			if (root.at(field).type() == nlohmann::json::value_t::number_integer || root.at(field).type() == nlohmann::json::value_t::number_float ||
-				root.at(field).type() == nlohmann::json::value_t::boolean)
-				return std::format("{}", root.at(field));
-			return root.at(field);
+			{
+				std::string value;
+				if (!isPresent(root, field) || JSONUtils::isNull(root, field))
+					return std::nullopt;
+				if (root.at(field).type() == nlohmann::json::value_t::number_integer
+					|| root.at(field).type() == nlohmann::json::value_t::number_float
+					|| root.at(field).type() == nlohmann::json::value_t::boolean)
+					value = std::format("{}", root.at(field));
+				else
+					value = root.at(field);
+				if (!allowedValues.empty())
+				{
+					if (std::ranges::find(allowedValues, value) != allowedValues.end())
+						return value;
+					{
+						std::string errorMessage = fmt::format(
+						"Invalid value '{}' for '{}'. Allowed values are: {}",
+							value, field, fmt::join(allowedValues, ", ")
+						);
+						LOG_ERROR(errorMessage);
+						if (exceptionOnError)
+							throw std::invalid_argument(errorMessage);
+						return std::nullopt;
+					}
+				}
+				return value;
+			}
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asOptString failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_ERROR(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return std::nullopt;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
+	[[deprecated("This method is deprecated. Use asOpt<string>() instead.")]]
 	static std::optional<std::string> asOptString(const J *root, std::string_view field = "", bool exceptionOnMissing = false)
 	{
 		if (!root)
@@ -291,9 +585,10 @@ class JSONUtils
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static int32_t asInt32(const J &root, std::string_view field = "", const int32_t defaultValue = 0, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<int32_t>() instead.")]]
+	static int32_t asInt32(const J &root, std::string_view field = "", const int32_t defaultValue = 0, bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -301,7 +596,6 @@ class JSONUtils
 				field
 			);
 			LOG_ERROR(errorMessage);
-
 			throw JsonFieldNotFound(errorMessage);
 		}
 
@@ -320,6 +614,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asInt32 failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return defaultValue;
 					}
 				}
@@ -336,6 +638,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asInt32 failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return defaultValue;
 				}
 			}
@@ -343,12 +653,21 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asInt32 failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return defaultValue;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
+	[[deprecated("This method is deprecated. Use as<int32_t>() instead.")]]
 	static int32_t asInt32(const J *root, std::string_view field = "", const int32_t defaultValue = 0, bool exceptionOnMissing = false)
 	{
 		if (!root)
@@ -358,9 +677,10 @@ class JSONUtils
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<int32_t> asOptInt32(const J &root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use asOpt<int32_t>() instead.")]]
+	static std::optional<int32_t> asOptInt32(const J &root, std::string_view field = "", bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -368,7 +688,6 @@ class JSONUtils
 				field
 			);
 			LOG_ERROR(errorMessage);
-
 			throw JsonFieldNotFound(errorMessage);
 		}
 
@@ -387,6 +706,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asOptInt32 failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return std::nullopt;
 					}
 				}
@@ -403,6 +730,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asOptInt32 failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return std::nullopt;
 				}
 			}
@@ -410,24 +745,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asOptInt32 failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return std::nullopt;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<int32_t> asOptInt32(const J *root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use asOpt<int32_t>() instead.")]]
+	static std::optional<int32_t> asOptInt32(const J *root, std::string_view field = "", bool exceptionOnError = false)
 	{
 		if (!root)
 			return std::nullopt;
-		return asOptInt32(*root, field, exceptionOnMissing);
+		return asOptInt32(*root, field, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static int64_t asInt64(const J &root, std::string_view field = "", const int64_t defaultValue = 0, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<int64_t>() instead.")]]
+	static int64_t asInt64(const J &root, std::string_view field = "", const int64_t defaultValue = 0, bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -435,7 +780,6 @@ class JSONUtils
 				field
 			);
 			LOG_ERROR(errorMessage);
-
 			throw JsonFieldNotFound(errorMessage);
 		}
 
@@ -454,6 +798,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asInt64 failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return defaultValue;
 					}
 				}
@@ -470,6 +822,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asInt64 failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return defaultValue;
 				}
 			}
@@ -477,24 +837,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asInt64 failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return defaultValue;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static int64_t asInt64(const J *root, std::string_view field = "", const int64_t defaultValue = 0, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<int64_t>() instead.")]]
+	static int64_t asInt64(const J *root, std::string_view field = "", const int64_t defaultValue = 0, bool exceptionOnError = false)
 	{
 		if (!root)
 			return defaultValue;
-		return asInt64(*root, field, defaultValue, exceptionOnMissing);
+		return asInt64(*root, field, defaultValue, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<int64_t> asOptInt64(const J &root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use asOpt<int64_t>() instead.")]]
+	static std::optional<int64_t> asOptInt64(const J &root, std::string_view field = "", bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -502,7 +872,6 @@ class JSONUtils
 				field
 			);
 			LOG_ERROR(errorMessage);
-
 			throw JsonFieldNotFound(errorMessage);
 		}
 
@@ -521,6 +890,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asOptInt64 failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return std::nullopt;
 					}
 				}
@@ -537,6 +914,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asOptInt64 failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return std::nullopt;
 				}
 			}
@@ -544,24 +929,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asOptInt64 failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return std::nullopt;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<int64_t> asOptInt64(const J *root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use asOpt<int64_t>() instead.")]]
+	static std::optional<int64_t> asOptInt64(const J *root, std::string_view field = "", bool exceptionOnError = false)
 	{
 		if (!root)
 			return std::nullopt;
-		return asOptInt64(*root, field, exceptionOnMissing);
+		return asOptInt64(*root, field, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static uint64_t asUint64(const J &root, std::string_view field = "", const uint64_t defaultValue = 0, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static uint64_t asUint64(const J &root, std::string_view field = "", const uint64_t defaultValue = 0, bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -588,6 +983,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asUint64 failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return defaultValue;
 					}
 				}
@@ -604,6 +1007,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asUint64 failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return defaultValue;
 				}
 			}
@@ -611,24 +1022,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asUint64 failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return defaultValue;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static uint64_t asUint64(const J *root, std::string_view field = "", const uint64_t defaultValue = 0, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static uint64_t asUint64(const J *root, std::string_view field = "", const uint64_t defaultValue = 0, bool exceptionOnError = false)
 	{
 		if (!root)
 			return defaultValue;
-		return asUint64(*root, field, defaultValue, exceptionOnMissing);
+		return asUint64(*root, field, defaultValue, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<uint64_t> asOptUint64(const J &root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<uint64_t> asOptUint64(const J &root, std::string_view field = "", bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			std::string errorMessage = std::format(
 				"Field not found"
@@ -655,6 +1076,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asOptUint64 failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return std::nullopt;
 					}
 				}
@@ -671,6 +1100,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asOptUint64 failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return std::nullopt;
 				}
 			}
@@ -678,24 +1115,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asOptUint64 failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return std::nullopt;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<uint64_t> asOptUint64(const J *root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<uint64_t> asOptUint64(const J *root, std::string_view field = "", bool exceptionOnError = false)
 	{
 		if (!root)
 			return std::nullopt;
-		return asOptUint64(*root, field, exceptionOnMissing);
+		return asOptUint64(*root, field, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static double asDouble(const J &root, std::string_view field = "", const double defaultValue = 0.0, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static double asDouble(const J &root, std::string_view field = "", const double defaultValue = 0.0, bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -722,6 +1169,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asDouble failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return defaultValue;
 					}
 				}
@@ -738,6 +1193,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asDouble failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return defaultValue;
 				}
 			}
@@ -745,24 +1208,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asDouble failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return defaultValue;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static double asDouble(const J *root, std::string_view field = "", const double defaultValue = 0.0, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static double asDouble(const J *root, std::string_view field = "", const double defaultValue = 0.0, bool exceptionOnError = false)
 	{
 		if (!root)
 			return defaultValue;
-		return asDouble(*root, field, defaultValue, exceptionOnMissing);
+		return asDouble(*root, field, defaultValue, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<double> asOptDouble(const J &root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<double> asOptDouble(const J &root, std::string_view field = "", bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -789,6 +1262,14 @@ class JSONUtils
 					}
 					catch (std::exception &e)
 					{
+						const std::string errorMessage = std::format(
+							"asOptDouble failed"
+							", exception: {}",
+							e.what()
+						);
+						LOG_WARN(errorMessage);
+						if (exceptionOnError)
+							throw;
 						return std::nullopt;
 					}
 				}
@@ -805,6 +1286,14 @@ class JSONUtils
 				}
 				catch (std::exception &e)
 				{
+					const std::string errorMessage = std::format(
+						"asOptDouble failed"
+						", exception: {}",
+						e.what()
+					);
+					LOG_WARN(errorMessage);
+					if (exceptionOnError)
+						throw;
 					return std::nullopt;
 				}
 			}
@@ -812,24 +1301,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asOptDouble failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return std::nullopt;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<double> asOptDouble(const J *root, std::string_view field = "", bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<double> asOptDouble(const J *root, std::string_view field = "", bool exceptionOnError = false)
 	{
 		if (!root)
 			return std::nullopt;
-		return asOptDouble(*root, field, exceptionOnMissing);
+		return asOptDouble(*root, field, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static bool asBool(const J &root, std::string_view field, const bool defaultValue = false, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static bool asBool(const J &root, std::string_view field, const bool defaultValue = false, bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -883,24 +1382,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asBool failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return defaultValue;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static bool asBool(const J *root, std::string_view field, const bool defaultValue = false, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static bool asBool(const J *root, std::string_view field, const bool defaultValue = false, bool exceptionOnError = false)
 	{
 		if (!root)
 			return defaultValue;
-		return asBool(*root, field, defaultValue, exceptionOnMissing);
+		return asBool(*root, field, defaultValue, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<bool> asOptBool(const J &root, std::string_view field, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<bool> asOptBool(const J &root, std::string_view field, bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -954,24 +1463,34 @@ class JSONUtils
 		}
 		catch (nlohmann::json::out_of_range &e)
 		{
+			const std::string errorMessage = std::format(
+				"asOptBool failed"
+				", exception: {}",
+				e.what()
+			);
+			LOG_WARN(errorMessage);
+			if (exceptionOnError)
+				throw;
 			return std::nullopt;
 		}
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<bool> asOptBool(const J *root, std::string_view field, bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<bool> asOptBool(const J *root, std::string_view field, bool exceptionOnError = false)
 	{
 		if (!root)
 			return std::nullopt;
-		return asOptBool(*root, field, exceptionOnMissing);
+		return asOptBool(*root, field, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static J asJson(const J &root, std::string_view field, J defaultValue = J(), const bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static J asJson(const J &root, std::string_view field, J defaultValue = J(), const bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -995,18 +1514,20 @@ class JSONUtils
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static J asJson(const J *root, std::string_view field, J defaultValue = J(), const bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static J asJson(const J *root, std::string_view field, J defaultValue = J(), const bool exceptionOnError = false)
 	{
 		if (!root)
 			return defaultValue;
-		return asJson(*root, field, defaultValue, exceptionOnMissing);
+		return asJson(*root, field, defaultValue, exceptionOnError);
 	}
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<J> asOptJson(const J &root, std::string_view field, const bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<J> asOptJson(const J &root, std::string_view field, const bool exceptionOnError = false)
 	{
-		if (exceptionOnMissing && !field.empty() && !isPresent(root, field))
+		if (exceptionOnError && !field.empty() && !isPresent(root, field))
 		{
 			const std::string errorMessage = std::format(
 				"Field not found"
@@ -1030,12 +1551,14 @@ class JSONUtils
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static std::optional<J> asOptJson(const J *root, std::string_view field, const bool exceptionOnMissing = false)
+	[[deprecated("This method is deprecated. Use as<...>() instead.")]]
+	static std::optional<J> asOptJson(const J *root, std::string_view field, const bool exceptionOnError = false)
 	{
 		if (!root)
 			return std::nullopt;
-		return asOptJson(*root, field, exceptionOnMissing);
+		return asOptJson(*root, field, exceptionOnError);
 	}
+	*/
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
@@ -1132,8 +1655,7 @@ class JSONUtils
 		{
 			if (root == nullptr)
 				return "null";
-			else
-				return root.dump(indent, ' ', true);
+			return root.dump(indent, ' ', true);
 		}
 		catch (const nlohmann::json::type_error &e)
 		{

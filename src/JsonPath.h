@@ -90,7 +90,7 @@ public:
     }
 
 	template <typename T>
-    [[nodiscard]] T as(T defaultValue = {}) const
+    [[nodiscard]] T as(T defaultValue = {}, std::span<const T> allowedValues = {}) const
     {
         if (!_root)
         {
@@ -100,7 +100,7 @@ public:
         }
     	try
     	{
-    		return JSONUtils::as<T>(*_root, "", defaultValue, false);
+    		return JSONUtils::as<T>(*_root, "", defaultValue, allowedValues, false);
     	}
     	catch (const std::exception &e)
     	{
@@ -111,7 +111,7 @@ public:
     }
 
 	template <typename T>
-    [[nodiscard]] std::optional<T> asOpt() const
+    [[nodiscard]] std::optional<T> asOpt(std::span<const T> allowedValues = {}) const
     {
         if (!_root) {
             if (_mode == AccessMode::Required)
@@ -120,7 +120,7 @@ public:
         }
     	try
     	{
-    		return JSONUtils::asOpt<T>(*_root);
+    		return JSONUtils::asOpt<T>(*_root, "", allowedValues, false);
     	}
     	catch (const std::exception &e)
     	{
