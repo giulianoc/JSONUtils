@@ -146,7 +146,7 @@ class JSONUtils
 					LOG_ERROR(errorMessage);
 					throw JsonFieldNotFound(errorMessage);
 				}
-				LOG_WARN(errorMessage);
+				// LOG_WARN(errorMessage);
 				return defaultVal;
 			}
 			{
