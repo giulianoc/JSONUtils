@@ -192,8 +192,9 @@ class JSONUtils
 		{
 			// abbiamo una eccezione se ad es. chiediamo una stringa (as<string>) ma il valore è un numero
 			const std::string errorMessage = field.empty() ?
-				std::format("Json: {}, exception: {}", JSONUtils::toString(root), e.what()) :
-				std::format("Field: {}, exception: {}", field, e.what());
+				std::format("json: {}, default: {}, exception: {}", JSONUtils::toString(root), defaultVal, e.what()) :
+				std::format("json: {}, field: {}, default: {}, exception: {}", JSONUtils::toString(root),
+					field, defaultVal, e.what());
 			if (exceptionOnError)
 			{
 				LOG_ERROR(errorMessage);
