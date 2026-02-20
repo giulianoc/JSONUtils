@@ -20,6 +20,9 @@ nbproject
 
 #ignora i seguenti eseguibili
 examples/json5/json5
+examples/as/as
+examples/json-path/json-path
+examples/json/json
 
 *.cgi
 *.fcgi
