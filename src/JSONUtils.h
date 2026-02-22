@@ -31,7 +31,7 @@ struct JsonFieldNotFound final : std::exception
 
 class JSONUtils
 {
-  public:
+public:
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
 	static bool isPresent(const J &root, std::string_view field, const bool checksAlsoNotNull = false)
@@ -344,12 +344,29 @@ class JSONUtils
 		{
 			if (fieldRoot.is_string())
 				return fieldRoot.get<std::string>();
-
 			if (fieldRoot.is_number())
 				return fieldRoot.dump();   // converte 15.876 -> "15.876"
-
 			if (fieldRoot.is_boolean())
 				return fieldRoot.get<bool>() ? "true" : "false";
+
+			const std::string errorMessage = std::format("getJsonValue failed"
+				", fieldRoot: {}", toString(fieldRoot)
+				);
+			LOG_ERROR(errorMessage);
+			throw std::invalid_argument(errorMessage);
+		}
+		else if constexpr (std::is_same_v<T, bool>)
+		{
+			if (fieldRoot.is_boolean())
+				return fieldRoot.get<bool>();
+			if (fieldRoot.is_number())
+				return fieldRoot.get<double>() != 0.0;
+			if (fieldRoot.is_string())
+			{
+				const auto& s = fieldRoot.get_ref<const std::string&>();
+				if (s == "true" || s == "1") return true;
+				if (s == "false" || s == "0") return false;
+			}
 
 			const std::string errorMessage = std::format("getJsonValue failed"
 				", fieldRoot: {}", toString(fieldRoot)
@@ -361,20 +378,17 @@ class JSONUtils
 		{
 			if (fieldRoot.is_number())
 				return fieldRoot.get<T>();
-
 			if (fieldRoot.is_string())
 			{
 				const auto& s = fieldRoot.get_ref<const std::string&>();
-
-				if constexpr (std::is_integral_v<T>)
-				{
-					if constexpr (std::is_signed_v<T>)
-						return static_cast<T>(std::stoll(s));
-					else
-						return static_cast<T>(std::stoull(s));
-				}
-				else if constexpr (std::is_floating_point_v<T>)
-					return static_cast<T>(std::stod(s));
+				T value{};
+				auto [ptr, ec] = std::from_chars(
+					s.data(),
+					s.data() + s.size(),
+					value
+				);
+				if (ec == std::errc() && ptr == s.data() + s.size())
+					return value;
 			}
 
 			const std::string errorMessage = std::format("getJsonValue failed"
