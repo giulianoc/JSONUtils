@@ -101,7 +101,8 @@ class JSONUtils
 			}
 			if (field.empty())
 			{
-				T value = root.template get<T>();
+				// T value = root.template get<T>();
+				T value = getJsonValue<T>(root);
 
 				if (!allowedValues.empty())
 				{
@@ -150,7 +151,8 @@ class JSONUtils
 				return defaultVal;
 			}
 			{
-				T value = root.at(field).template get<T>();
+				// T value = root.at(field).template get<T>();
+				T value = getJsonValue<T>(root.at(field));
 
 				if (!allowedValues.empty())
 				{
@@ -239,7 +241,8 @@ class JSONUtils
 			}
 			if (field.empty())
 			{
-				T value = root.template get<T>();
+				// T value = root.template get<T>();
+				T value = getJsonValue<T>(root);
 
 				if (!allowedValues.empty())
 				{
@@ -279,7 +282,8 @@ class JSONUtils
 			if (!JSONUtils::isPresent(root, field))
 				return std::nullopt;
 			{
-				T value = root.at(field).template get<T>();
+				// T value = root.at(field).template get<T>();
+				T value = getJsonValue<T>(root.at(field));
 
 				if (!allowedValues.empty())
 				{
@@ -331,6 +335,56 @@ class JSONUtils
 			LOG_WARN(errorMessage);
 			return std::nullopt;
 		}
+	}
+
+	template<typename T>
+	static T getJsonValue(const nlohmann::json& fieldRoot)
+	{
+		if constexpr (std::is_same_v<T, std::string>)
+		{
+			if (fieldRoot.is_string())
+				return fieldRoot.get<std::string>();
+
+			if (fieldRoot.is_number())
+				return fieldRoot.dump();   // converte 15.876 -> "15.876"
+
+			if (fieldRoot.is_boolean())
+				return fieldRoot.get<bool>() ? "true" : "false";
+
+			const std::string errorMessage = std::format("getJsonValue failed"
+				", fieldRoot: {}", toString(fieldRoot)
+				);
+			LOG_ERROR(errorMessage);
+			throw std::invalid_argument(errorMessage);
+		}
+		else if constexpr (std::is_arithmetic_v<T>) // NUMERIC TYPES REQUESTED
+		{
+			if (fieldRoot.is_number())
+				return fieldRoot.get<T>();
+
+			if (fieldRoot.is_string())
+			{
+				const auto& s = fieldRoot.get_ref<const std::string&>();
+
+				if constexpr (std::is_integral_v<T>)
+				{
+					if constexpr (std::is_signed_v<T>)
+						return static_cast<T>(std::stoll(s));
+					else
+						return static_cast<T>(std::stoull(s));
+				}
+				else if constexpr (std::is_floating_point_v<T>)
+					return static_cast<T>(std::stod(s));
+			}
+
+			const std::string errorMessage = std::format("getJsonValue failed"
+				", fieldRoot: {}", toString(fieldRoot)
+				);
+			LOG_ERROR(errorMessage);
+			throw std::invalid_argument(errorMessage);
+		}
+		else
+			return fieldRoot.get<T>();
 	}
 
 	/*
