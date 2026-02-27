@@ -90,7 +90,8 @@ public:
 		{
 			if (root == nullptr)
 			{
-				const std::string errorMessage = "Received a json nullptr";
+				const std::string errorMessage = std::format("Received a json nullptr"
+					", field: {}", field);
 				if (exceptionOnError)
 				{
 					LOG_ERROR(errorMessage);
