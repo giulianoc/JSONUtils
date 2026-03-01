@@ -97,7 +97,7 @@ public:
 					LOG_ERROR(errorMessage);
 					throw std::invalid_argument(errorMessage);
 				}
-				LOG_WARN(errorMessage);
+				LOG_TRACE(errorMessage);
 				return defaultVal;
 			}
 			if (field.empty())
@@ -135,7 +135,7 @@ public:
 						LOG_ERROR(errorMessage);
 						throw std::invalid_argument(errorMessage);
 					}
-					LOG_WARN(errorMessage);
+					LOG_TRACE(errorMessage);
 					return defaultVal;
 				}
 				return value;
@@ -148,7 +148,7 @@ public:
 					LOG_ERROR(errorMessage);
 					throw JsonFieldNotFound(errorMessage);
 				}
-				// LOG_WARN(errorMessage);
+				LOG_TRACE(errorMessage);
 				return defaultVal;
 			}
 			{
@@ -185,7 +185,7 @@ public:
 						LOG_ERROR(errorMessage);
 						throw std::invalid_argument(errorMessage);
 					}
-					LOG_WARN(errorMessage);
+					LOG_TRACE(errorMessage);
 					return defaultVal;
 				}
 				return value;
@@ -202,7 +202,7 @@ public:
 				LOG_ERROR(errorMessage);
 				throw;
 			}
-			LOG_WARN(errorMessage);
+			LOG_TRACE(errorMessage);
 			return defaultVal;
 		}
 	}
@@ -237,7 +237,7 @@ public:
 					LOG_ERROR(errorMessage);
 					throw std::invalid_argument(errorMessage);
 				}
-				LOG_WARN(errorMessage);
+				LOG_TRACE(errorMessage);
 				return std::nullopt;
 			}
 			if (field.empty())
@@ -275,7 +275,7 @@ public:
 						LOG_ERROR(errorMessage);
 						throw std::invalid_argument(errorMessage);
 					}
-					LOG_WARN(errorMessage);
+					LOG_TRACE(errorMessage);
 					return std::nullopt;
 				}
 				return value;
@@ -316,7 +316,7 @@ public:
 						LOG_ERROR(errorMessage);
 						throw std::invalid_argument(errorMessage);
 					}
-					LOG_WARN(errorMessage);
+					LOG_TRACE(errorMessage);
 					return std::nullopt;
 				}
 				return value;
@@ -333,7 +333,7 @@ public:
 				LOG_ERROR(errorMessage);
 				throw;
 			}
-			LOG_WARN(errorMessage);
+			LOG_TRACE(errorMessage);
 			return std::nullopt;
 		}
 	}
@@ -447,7 +447,7 @@ public:
 
 	template <typename J>
 	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
-	static J toJson(const std::string_view &j, bool warningIfError = false)
+	static J toJson(const std::string_view &j, const bool warningIfError = false)
 	{
 		try
 		{
