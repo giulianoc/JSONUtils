@@ -416,12 +416,14 @@ public:
 		requires (std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>) &&
 				 (std::is_same_v<V, nlohmann::json> || std::is_same_v<V, nlohmann::ordered_json>)
 	static void setOrAdd(J &obj, std::string_view key, const V &values) {
+		LOG_INFO("aaaa");
 		if (!obj.contains(key)) {
 			obj[key] = values;
 			return;
 		}
 
 		if (values.is_array()) {
+		LOG_INFO("aaaa");
 			if (obj[key].is_array()) {
 				V temp = obj[key];
 				for (const auto &val: values) {
@@ -431,7 +433,9 @@ public:
 			} else {
 				obj[key] = values;
 			}
+		LOG_INFO("aaaa");
 		} else if (values.is_object()) {
+		LOG_INFO("aaaa");
 			if (obj[key].is_object()) {
 				for (auto it = values.begin(); it != values.end(); ++it) {
 					obj[key][it.key()] = it.value();
@@ -439,9 +443,12 @@ public:
 			} else {
 				obj[key] = values;
 			}
+		LOG_INFO("aaaa");
 		} else {
+		LOG_INFO("aaaa");
 			obj[key] = values;
 		}
+		LOG_INFO("aaaa");
 	}
 
 	template <typename J>
