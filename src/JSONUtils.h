@@ -405,6 +405,8 @@ public:
 		requires requires(J) { (std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>); } &&
 				 (std::is_integral_v<N> || std::is_floating_point_v<N>)
 	static void setOrAdd(J &obj, const std::string_view &key, N value) {
+		if (obj == nullptr || obj.is_null())
+			return;
 		if (obj.contains(key) && obj[key].is_number()) {
 			obj[key] = obj[key].template get<N>() + value;
 		} else {
@@ -416,14 +418,14 @@ public:
 		requires (std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>) &&
 				 (std::is_same_v<V, nlohmann::json> || std::is_same_v<V, nlohmann::ordered_json>)
 	static void setOrAdd(J &obj, std::string_view key, const V &values) {
-		LOG_INFO("aaaa");
-		if (!obj.contains(key)) {
+		if (obj == nullptr || obj.is_null())
+			return;
+		if (!obj.contains(key) || obj[key] == nullptr || obj[key].is_null()) {
 			obj[key] = values;
 			return;
 		}
 
 		if (values.is_array()) {
-		LOG_INFO("aaaa");
 			if (obj[key].is_array()) {
 				V temp = obj[key];
 				for (const auto &val: values) {
@@ -433,9 +435,7 @@ public:
 			} else {
 				obj[key] = values;
 			}
-		LOG_INFO("aaaa");
 		} else if (values.is_object()) {
-		LOG_INFO("aaaa");
 			if (obj[key].is_object()) {
 				for (auto it = values.begin(); it != values.end(); ++it) {
 					obj[key][it.key()] = it.value();
@@ -443,12 +443,9 @@ public:
 			} else {
 				obj[key] = values;
 			}
-		LOG_INFO("aaaa");
 		} else {
-		LOG_INFO("aaaa");
 			obj[key] = values;
 		}
-		LOG_INFO("aaaa");
 	}
 
 	template <typename J>
