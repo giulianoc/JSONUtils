@@ -17,6 +17,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <charconv>
 #include <spdlog/fmt/bundled/ranges.h>
 
 struct JsonFieldNotFound final : std::exception
