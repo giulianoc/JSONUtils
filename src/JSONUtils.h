@@ -338,17 +338,17 @@ public:
 		}
 	}
 
-	template<typename T>
-	static T getJsonValue(const nlohmann::json& fieldRoot)
+	template <typename T, typename J>
+	static T getJsonValue(const J& fieldRoot)
 	{
 		if constexpr (std::is_same_v<T, std::string>)
 		{
 			if (fieldRoot.is_string())
-				return fieldRoot.get<std::string>();
+				return fieldRoot.template get<std::string>();
 			if (fieldRoot.is_number())
 				return fieldRoot.dump();   // converte 15.876 -> "15.876"
 			if (fieldRoot.is_boolean())
-				return fieldRoot.get<bool>() ? "true" : "false";
+				return fieldRoot.template get<bool>() ? "true" : "false";
 
 			const std::string errorMessage = std::format("getJsonValue failed"
 				", fieldRoot: {}", toString(fieldRoot)
@@ -359,12 +359,12 @@ public:
 		else if constexpr (std::is_same_v<T, bool>)
 		{
 			if (fieldRoot.is_boolean())
-				return fieldRoot.get<bool>();
+				return fieldRoot.template get<bool>();
 			if (fieldRoot.is_number())
-				return fieldRoot.get<double>() != 0.0;
+				return fieldRoot.template get<double>() != 0.0;
 			if (fieldRoot.is_string())
 			{
-				const auto& s = fieldRoot.get_ref<const std::string&>();
+				const auto& s = fieldRoot.template get_ref<const std::string&>();
 				if (s == "true" || s == "1") return true;
 				if (s == "false" || s == "0") return false;
 			}
@@ -378,10 +378,10 @@ public:
 		else if constexpr (std::is_arithmetic_v<T>) // NUMERIC TYPES REQUESTED
 		{
 			if (fieldRoot.is_number())
-				return fieldRoot.get<T>();
+				return fieldRoot.template get<T>();
 			if (fieldRoot.is_string())
 			{
-				const auto& s = fieldRoot.get_ref<const std::string&>();
+				const auto& s = fieldRoot.template get_ref<const std::string&>();
 				T value{};
 				auto [ptr, ec] = std::from_chars(
 					s.data(),
@@ -399,7 +399,7 @@ public:
 			throw std::invalid_argument(errorMessage);
 		}
 		else
-			return fieldRoot.get<T>();
+			return fieldRoot.template get<T>();
 	}
 
 	template<typename J, typename N>
@@ -447,6 +447,17 @@ public:
 		} else {
 			obj[key] = values;
 		}
+	}
+
+	template <typename J>
+	requires std::is_same_v<J, nlohmann::json> || std::is_same_v<J, nlohmann::ordered_json>
+	static std::vector<std::string> keys(const J& root)
+	{
+		std::vector<std::string> keys;
+		keys.reserve(root.size());
+		for (auto &[k, v]: root.items())
+			keys.push_back(k);
+		return keys;
 	}
 
 	template <typename J>
