@@ -72,6 +72,31 @@ public:
         return _root != nullptr;
     }
 
+	[[nodiscard]] bool isObject() const noexcept
+    {
+    	return _root != nullptr && _root->is_object();
+    }
+
+	[[nodiscard]] bool isArray() const noexcept
+    {
+    	return _root != nullptr && _root->is_array();
+    }
+
+	[[nodiscard]] bool isString() const noexcept
+    {
+    	return _root != nullptr && _root->is_string();
+    }
+
+	[[nodiscard]] bool isNumber() const noexcept
+    {
+    	return _root != nullptr && _root->is_number();
+    }
+
+	[[nodiscard]] bool isBoolean() const noexcept
+    {
+    	return _root != nullptr && _root->is_boolean();
+    }
+
 	[[nodiscard]] bool empty() const
     {
     	if (!_root)
