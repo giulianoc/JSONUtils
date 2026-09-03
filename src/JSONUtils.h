@@ -17,6 +17,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <cctype>
 #include <charconv>
 #include <spdlog/fmt/bundled/ranges.h>
 
@@ -567,7 +568,5 @@ public:
 	static std::string applyEnvironmentToConfiguration(std::string configuration, const std::string_view &environmentPrefix);
 
   private:
-	static std::string json5_removeComments(const std::string &input);
-	static std::string json5_removeTrailingCommas(const std::string &input);
-	static std::string json5_quoteUnquotedKeys(const std::string &input);
+	static size_t json5_copyString(const std::string &input, size_t i, std::string &out);
 };

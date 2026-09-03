@@ -10,37 +10,129 @@ extern char **environ;
 #endif
 
 
-// Rimuove commenti singola riga e multi-riga
-std::string JSONUtils::json5_removeComments(const std::string &input)
+// Copia in out la stringa che inizia in input[i] (apice singolo o doppio) normalizzandola
+// in una stringa JSON. Restituisce la posizione del carattere successivo alla stringa.
+size_t JSONUtils::json5_copyString(const std::string &input, size_t i, std::string &out)
 {
-	// Rimuove i commenti "// ... \n"
-	std::string no_single_line = regex_replace(input, std::regex(R"(\/\/[^\n]*)"), "");
+	const char quote = input[i++];
 
-	// Rimuove i commenti multi-riga "/* ... */" anche su più righe
-	// std::string no_multi_line = regex_replace(no_single_line, regex(R"((?s)\/\*.*?\*\/)"), "");
-	std::string no_multi_line = regex_replace(no_single_line, std::regex(R"(\/\*[\s\S]*?\*\/)"), "");
+	out += '"';
+	while (i < input.size() && input[i] != quote)
+	{
+		if (input[i] == '\\' && i + 1 < input.size())
+		{
+			// \' non è un escape valido in JSON
+			if (input[i + 1] == '\'')
+				out += '\'';
+			else
+			{
+				out += input[i];
+				out += input[i + 1];
+			}
+			i += 2;
+			continue;
+		}
 
-	return no_multi_line;
+		// un apice doppio non escapato è lecito dentro una stringa con apici singoli
+		if (input[i] == '"')
+			out += '\\';
+		out += input[i++];
+	}
+	out += '"';
+
+	return i < input.size() ? i + 1 : i;
 }
 
-// Rimuove le virgole finali in oggetti e array
-std::string JSONUtils::json5_removeTrailingCommas(const std::string &input) { return regex_replace(input, std::regex(R"(,\s*([\]}]))"), "$1"); }
-
-// Mette le virgolette attorno a chiavi non quotate
-std::string JSONUtils::json5_quoteUnquotedKeys(const std::string &input)
-{
-	// Cerca chiavi tipo: chiave: → "chiave":
-	return regex_replace(input, std::regex(R"((\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*):)"), "$1\"$2\"$3:");
-}
-
-// Funzione completa: JSON5 → JSON standard
+// JSON5 → JSON standard: rimuove i commenti, mette le virgolette attorno alle chiavi non
+// quotate, converte le stringhe con apici singoli e toglie le virgole finali.
+// A differenza di una serie di regex applicate all'intero testo, la scansione è unica e
+// salta il contenuto delle stringhe: un "https://..." o un "chiave: valore" restano intatti.
+// Non sono gestiti (non servono nei casi d'uso attuali): numeri esadecimali, numeri con
+// segno o punto iniziale/finale, NaN/Infinity, stringhe su più righe.
 std::string JSONUtils::json5ToJson(const std::string &json5)
 {
-	std::string cleaned = json5_removeComments(json5);
-	cleaned = json5_removeTrailingCommas(cleaned);
-	cleaned = json5_quoteUnquotedKeys(cleaned);
+	std::string json;
+	json.reserve(json5.size());
 
-	return cleaned;
+	// posizione in json dell'ultima virgola emessa, npos se dopo di essa è già stato
+	// emesso qualcosa che non sia uno spazio
+	size_t lastComma = std::string::npos;
+
+	size_t i = 0;
+	while (i < json5.size())
+	{
+		const char c = json5[i];
+
+		// commento su singola riga
+		if (c == '/' && i + 1 < json5.size() && json5[i + 1] == '/')
+		{
+			i = json5.find('\n', i + 2);
+			if (i == std::string::npos)
+				break;
+			continue;
+		}
+
+		// commento su più righe
+		if (c == '/' && i + 1 < json5.size() && json5[i + 1] == '*')
+		{
+			i = json5.find("*/", i + 2);
+			if (i == std::string::npos)
+				break;
+			i += 2;
+			continue;
+		}
+
+		// gli spazi non invalidano l'eventuale virgola finale in sospeso
+		if (std::isspace(static_cast<unsigned char>(c)))
+		{
+			json += c;
+			i++;
+			continue;
+		}
+
+		// la virgola viene emessa e poi rimossa se il primo elemento significativo che la
+		// segue è una chiusura di oggetto o di array
+		if (c == ',')
+		{
+			lastComma = json.size();
+			json += c;
+			i++;
+			continue;
+		}
+
+		if ((c == '}' || c == ']') && lastComma != std::string::npos)
+			json.erase(lastComma, 1);
+		lastComma = std::string::npos;
+
+		if (c == '"' || c == '\'')
+		{
+			i = json5_copyString(json5, i, json);
+			continue;
+		}
+
+		// chiave non quotata: un identificatore seguito da ':'
+		if (std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '$')
+		{
+			size_t end = i;
+			while (end < json5.size() &&
+				   (std::isalnum(static_cast<unsigned char>(json5[end])) || json5[end] == '_' || json5[end] == '$'))
+				end++;
+
+			// true, false, null e gli altri valori non quotati restano tali
+			if (const size_t next = json5.find_first_not_of(" \t\r\n", end);
+				next != std::string::npos && json5[next] == ':')
+				json += '"' + json5.substr(i, end - i) + '"';
+			else
+				json += json5.substr(i, end - i);
+			i = end;
+			continue;
+		}
+
+		json += c;
+		i++;
+	}
+
+	return json;
 }
 
 // metodo aggiunto a JSONUtils solo perchè utilizzato da loadConfigurationFile.
