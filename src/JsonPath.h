@@ -72,6 +72,11 @@ public:
         return _root != nullptr;
     }
 
+	[[nodiscard]] bool isNull() const noexcept
+    {
+    	return _root != nullptr && _root->is_null();
+    }
+
 	[[nodiscard]] bool isObject() const noexcept
     {
     	return _root != nullptr && _root->is_object();
